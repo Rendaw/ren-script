@@ -1,7 +1,11 @@
 NAME = script
 OBJECTS = objects/script.o objects/databuilder.o
 COMPILE_EXTRA = 
-LINK_EXTRA = -llua
+ifeq ($(PLATFORM),windows)
+	LINK_EXTRA = -lren-general -llua5.1
+else
+	LINK_EXTRA = -lren-general -llua
+endif
 
 include ../library-tools/Makefile.include
 
