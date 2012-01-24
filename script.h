@@ -14,7 +14,6 @@ All registered functions go under table "ext", so "ext.SomeFunction()" would be
 an appropriate call.
 */
 
-// Other Rendaw libraries
 #include <ren-general/string.h>
 #include <ren-general/auxinclude.h>
 #include <ren-general/vector.h>
