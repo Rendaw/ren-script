@@ -297,6 +297,17 @@ int Script::GetInteger(void)
 	return Out;
 }
 
+unsigned int Script::GetUnsignedInteger(void)
+{
+	if (!lua_isnumber(Instance, -1))
+		{ Error("Tried to get an (unsigned) integer that wasn't an integer."); return 0; }
+
+	unsigned int Out = lua_tonumber(Instance, -1);
+	lua_remove(Instance, -1);
+
+	return Out;
+}
+
 float Script::GetFloat(void)
 {
 	if (!lua_isnumber(Instance, -1))

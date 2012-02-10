@@ -82,6 +82,7 @@ class Script
 
 		String GetString(void);
 		int GetInteger(void);
+		unsigned int GetUnsignedInteger(void);
 		float GetFloat(void);
 		bool GetBoolean(void);
 		int GetIndex(void); // Like integer, but less one

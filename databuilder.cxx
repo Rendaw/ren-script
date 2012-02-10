@@ -3,6 +3,20 @@
 #include <cassert>
 #include <cstdlib>
 
+String ScriptDataBuilder::Escape(String const &Input)
+{
+	StringStream Out;
+	for (auto &Element : Input)
+	{
+		if (Element == '\\')
+			Out << "\\\\";
+		else if (Element == '"')
+			Out << "\\\"";
+		else Out << Element;
+	}
+	return Out.str();
+}
+
 ScriptDataBuilder::ScriptDataBuilder(OutputStream &Output, unsigned int InitialIndentation) :
 	Output(Output), InitialIndentation(InitialIndentation), Indentation(InitialIndentation), 
 	FirstAtLevel(true), AfterKey(false)
@@ -12,7 +26,7 @@ ScriptDataBuilder &ScriptDataBuilder::Key(String const &Name)
 {
 	assert(!AfterKey);
 	Prepare();
-	Output << "[\"" << Name << "\"] = ";
+	Output << "[\"" << Escape(Name) << "\"] = ";
 	AfterKey = true;
 	return *this;
 }
@@ -57,18 +71,25 @@ ScriptDataBuilder &ScriptDataBuilder::EndTable(void)
 ScriptDataBuilder &ScriptDataBuilder::Value(String const &Data)
 {
 	Prepare();
-	Output << "\"" << Data << "\"";
+	Output << "\"" << Escape(Data) << "\"";
 	return *this;
 }
 
-ScriptDataBuilder &ScriptDataBuilder::Value(char const *const &Data)
+/*ScriptDataBuilder &ScriptDataBuilder::Value(char const *const &Data)
 {
 	Prepare();
 	Output << "\"" << Data << "\"";
 	return *this;
-}
+}*/
 
 ScriptDataBuilder &ScriptDataBuilder::Value(int const &Data)
+{
+	Prepare();
+	Output << Data;
+	return *this;
+}
+
+ScriptDataBuilder &ScriptDataBuilder::Value(unsigned int const &Data)
 {
 	Prepare();
 	Output << Data;
