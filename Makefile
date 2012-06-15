@@ -2,9 +2,9 @@ NAME = script
 OBJECTS = objects/script.o objects/databuilder.o
 COMPILE_EXTRA = 
 ifeq ($(PLATFORM),windows)
-	LINK_EXTRA = -lren-general -llua5.1
+	LINK_EXTRA = -lren-general -llua5.2
 else
-	LINK_EXTRA = -lren-general -llua
+	LINK_EXTRA = -lren-general -llua5.2
 endif
 
 include ../library-tools/Makefile.include

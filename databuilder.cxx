@@ -6,13 +6,13 @@
 String ScriptDataBuilder::Escape(String const &Input)
 {
 	StringStream Out;
-	for (auto &Element : Input)
+	for (auto &Character : Input)
 	{
-		if (Element == '\\')
+		if (Character == '\\')
 			Out << "\\\\";
-		else if (Element == '"')
+		else if (Character == '"')
 			Out << "\\\"";
-		else Out << Element;
+		else Out << Character;
 	}
 	return Out.str();
 }
@@ -75,13 +75,6 @@ ScriptDataBuilder &ScriptDataBuilder::Value(String const &Data)
 	return *this;
 }
 
-/*ScriptDataBuilder &ScriptDataBuilder::Value(char const *const &Data)
-{
-	Prepare();
-	Output << "\"" << Data << "\"";
-	return *this;
-}*/
-
 ScriptDataBuilder &ScriptDataBuilder::Value(int const &Data)
 {
 	Prepare();
@@ -128,6 +121,30 @@ ScriptDataBuilder &ScriptDataBuilder::Value(Color const &Data)
 {
 	Prepare();
 	Output << "{" << Data.Red << ", " << Data.Green << ", " << Data.Blue << ", " << Data.Alpha << "}";
+	return *this;
+}
+		
+ScriptDataBuilder &ScriptDataBuilder::Function(std::list<String> const &Arguments, String const &Body)
+{
+	Prepare();
+	Output << "function(";
+	bool First = true;
+	for (auto &Argument : Arguments) 
+	{
+		if (First) First = false;
+		else Output << ", ";
+		Output << Argument;
+	}
+	Output << ")\n";
+	StringStream BodyStream(Body);
+	String NextLine;
+	while (getline(BodyStream, NextLine))
+	{
+		Indent();
+		Output << "\t" << NextLine << "\n";
+	}
+	Indent();
+	Output << "end";
 	return *this;
 }
 

@@ -16,7 +16,6 @@ class ScriptDataBuilder
 		ScriptDataBuilder &Table(void);
 		ScriptDataBuilder &EndTable(void);
 		ScriptDataBuilder &Value(String const &Data);
-		//ScriptDataBuilder &Value(char const *const &Data); // Doesn't get called for string literals, for some reason (the bool one is called)
 		ScriptDataBuilder &Value(int const &Data);
 		ScriptDataBuilder &Value(unsigned int const &Data);
 		ScriptDataBuilder &Value(float const &Data);
@@ -24,6 +23,7 @@ class ScriptDataBuilder
 		ScriptDataBuilder &Value(Vector const &Data);
 		ScriptDataBuilder &Value(FlatVector const &Data);
 		ScriptDataBuilder &Value(Color const &Data);
+		ScriptDataBuilder &Function(std::list<String> const &Arguments, String const &Body);
 		ScriptDataBuilder &CustomValue(String const &Data);
 		
 		OutputStream &GetOutput(void);

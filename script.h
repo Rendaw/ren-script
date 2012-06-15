@@ -5,7 +5,7 @@
 
 /*
 Lua Structure
--- All Lua instances, when loaded, also get loaded with the standard libraries
+//-- All Lua instances, when loaded, also get loaded with the standard libraries
 -- All Lua instances, when loaded, are provided logging/error functions
 -- When a file is loaded (appended), it is run immediately
 
@@ -14,18 +14,20 @@ All registered functions go under table "ext", so "ext.SomeFunction()" would be
 an appropriate call.
 */
 
-#include <ren-general/string.h>
-#include <ren-general/auxinclude.h>
-#include <ren-general/vector.h>
-#include <ren-general/color.h>
-
-// Lua headers/library
 extern "C"
 {
 	#include <lua.h>
 	#include <lauxlib.h>
 	#include <lualib.h>
 }
+
+#include <functional>
+
+#include <ren-general/string.h>
+#include <ren-general/auxinclude.h>
+#include <ren-general/vector.h>
+#include <ren-general/color.h>
+#include <ren-general/lifetime.h>
 
 class Script
 {
@@ -38,8 +40,8 @@ class Script
 		bool Do(const String &ScriptName,
 			const std::vector<std::pair<String, String> > &Varibles = std::vector<std::pair<String, String> >());
 
-		void RegisterFunction(const String &InLuaName, lua_CFunction Function);
-		void RegisterFunction(const String &InLuaName, lua_CFunction Function, void *AssociatedData);
+		typedef std::function<int(Script State)> LuaFunction;
+		void RegisterFunction(const String &InLuaName, LuaFunction Function);
 		void EraseFunction(const String &InLuaName);
 
 		// Index tool - creates an index from an address
@@ -47,7 +49,6 @@ class Script
 
 		// Insert function tools
 		void Error(const String &Message);
-		void *GetAssociatedData(void);
 
 		// Lua data persistence
 		void SaveValue(const String &ValueName);
@@ -67,7 +68,7 @@ class Script
 		void PullElement(int Index);
 		bool TryElement(const String &Index);
 
-		bool PullNext(void);
+		bool PullNext(bool PopTableWhenDone = true);
 
 		// State query
 		int Height(void);
@@ -105,8 +106,11 @@ class Script
 		lua_State *GetState(void);
 
 	private:
+		static int HandleRegisteredFunction(lua_State *State);
+
 		lua_State *Instance;
 		bool Owner;
+		DeleterMap<String, LuaFunction> FunctionStorage;
 };
 
 #endif

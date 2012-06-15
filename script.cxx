@@ -7,13 +7,9 @@
 #include <assert.h>
 
 // Scripting core
-Script::Script(void) : Instance(luaL_newstate()), Owner(true)
-{
-	luaL_openlibs(Instance);
-}
+Script::Script(void) : Instance(luaL_newstate()), Owner(true) {}
 
-Script::Script(lua_State *FromInstance) : Instance(FromInstance), Owner(false)
-	{}
+Script::Script(lua_State *FromInstance) : Instance(FromInstance), Owner(false) {}
 
 Script::~Script(void)
 {
@@ -52,22 +48,14 @@ bool Script::Do(const String &ScriptName, const std::vector<std::pair<String, St
 	return true;
 }
 
-void Script::RegisterFunction(const String &InLuaName, lua_CFunction Function)
+void Script::RegisterFunction(const String &InLuaName, LuaFunction Function)
 {
-	lua_getglobal(Instance, "ext");
-	if (lua_isnil(Instance, 1))
-	{
-		lua_settop(Instance, 0);
-		lua_newtable(Instance);
-	}
+	// Store the lambda
+	assert(FunctionStorage.find(InLuaName) == FunctionStorage.end());
+	LuaFunction *UserData = new LuaFunction(Function);
+	FunctionStorage[InLuaName] = UserData;
 
-	lua_pushcfunction(Instance, Function);
-	lua_setfield(Instance, 1, InLuaName.c_str());
-	lua_setglobal(Instance, "ext");
-}
-
-void Script::RegisterFunction(const String &InLuaName, lua_CFunction Function, void *AssociatedData)
-{
+	// Create the lua hook
 	assert(lua_gettop(Instance) == 0);
 
 	lua_getglobal(Instance, "ext");
@@ -77,8 +65,8 @@ void Script::RegisterFunction(const String &InLuaName, lua_CFunction Function, v
 		lua_newtable(Instance);
 	}
 
-	lua_pushlightuserdata(Instance, AssociatedData);
-	lua_pushcclosure(Instance, Function, 1);
+	lua_pushlightuserdata(Instance, UserData);
+	lua_pushcclosure(Instance, HandleRegisteredFunction, 1);
 	lua_setfield(Instance, 1, InLuaName.c_str());
 	lua_setglobal(Instance, "ext");
 
@@ -87,6 +75,7 @@ void Script::RegisterFunction(const String &InLuaName, lua_CFunction Function, v
 
 void Script::EraseFunction(const String &InLuaName)
 {
+	// Destroy the lua hook
 	assert(lua_gettop(Instance) == 0);
 
 	lua_getglobal(Instance, "ext");
@@ -97,6 +86,11 @@ void Script::EraseFunction(const String &InLuaName)
 	lua_setglobal(Instance, "ext");
 
 	assert(lua_gettop(Instance) == 0);
+
+	// Delete the stored lambda
+	DeleterMap<String, LuaFunction>::iterator Found = FunctionStorage.find(InLuaName);
+	assert(Found != FunctionStorage.end());
+	FunctionStorage.erase(Found);
 }
 
 String Script::Index(void *Address, const String &Suffix)
@@ -110,11 +104,6 @@ void Script::Error(const String &Message)
 {
 	lua_pushstring(Instance, Message.c_str());
 	lua_error(Instance);
-}
-
-void *Script::GetAssociatedData(void)
-{
-	return lua_touserdata(Instance, lua_upvalueindex(1));
 }
 
 void Script::SaveValue(const String &ValueName)
@@ -241,13 +230,20 @@ bool Script::TryElement(const String &Index)
 	return true;
 }
 
-bool Script::PullNext(void)
+bool Script::PullNext(bool PopTableWhenDone)
 {
+	// If a table is on top, push a nill to start the iteration process
 	if (lua_istable(Instance, -1))
 		lua_pushnil(Instance);
-	else if (!lua_istable(Instance, -2)) return false;
 
-	return lua_next(Instance, -2);
+	// The stack must always have a table underneath the iterator value for iteration
+	if (!lua_istable(Instance, -2)) return false;
+
+	// Try to iterate - if the end is reached, pop the table
+	bool Success = lua_next(Instance, -2);
+	if (!Success && PopTableWhenDone)
+		lua_pop(Instance, 1);
+	return Success;
 }
 
 int Script::Height(void)
@@ -419,3 +415,10 @@ lua_State *Script::GetState(void)
 {
 	return Instance;
 }
+		
+int Script::HandleRegisteredFunction(lua_State *State)
+{
+	LuaFunction &Function = *(LuaFunction *)lua_touserdata(State, lua_upvalueindex(1));
+	return Function(Script(State));
+}
+
