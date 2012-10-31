@@ -286,7 +286,9 @@ void Script::PushInternal(const String &InternalName)
 bool Script::IsEmpty(void)
 {
 	assert(IsTable());
+#ifndef NDEBUG
 	unsigned int InitialHeight = Height();
+#endif
 	lua_pushnil(Instance);
 	if (lua_next(Instance, -2) == 0)
 		return true;
