@@ -5,7 +5,7 @@
 
 String ScriptDataBuilder::Escape(String const &Input)
 {
-	StringStream Out;
+	MemoryStream Out;
 	for (auto &Character : Input)
 	{
 		if (Character == '\\')
@@ -14,7 +14,7 @@ String ScriptDataBuilder::Escape(String const &Input)
 			Out << "\\\"";
 		else Out << Character;
 	}
-	return Out.str();
+	return Out;
 }
 
 ScriptDataBuilder::ScriptDataBuilder(OutputStream &Output, unsigned int InitialIndentation) :
@@ -136,9 +136,9 @@ ScriptDataBuilder &ScriptDataBuilder::Function(std::list<String> const &Argument
 		Output << Argument;
 	}
 	Output << ")\n";
-	StringStream BodyStream(Body);
+	MemoryStream BodyStream(Body);
 	String NextLine;
-	while (getline(BodyStream, NextLine))
+	while (BodyStream >> NextLine)
 	{
 		Indent();
 		Output << "\t" << NextLine << "\n";

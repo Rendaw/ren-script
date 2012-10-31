@@ -9,20 +9,24 @@ Lua Structure
 -- Use asserts to make sure the stack is as expected.  Assert after pulling elements from tables.
 */
 
+#ifndef INTREELUA
 extern "C"
 {
+#endif
 	#include <lua.h>
 	#include <lauxlib.h>
 	#include <lualib.h>
+#ifndef INTREELUA
 }
+#endif
 
 #include <functional>
 
-#include <ren-general/string.h>
-#include <ren-general/auxinclude.h>
-#include <ren-general/vector.h>
-#include <ren-general/color.h>
-#include <ren-general/lifetime.h>
+#include "../ren-general/string.h"
+#include "../ren-general/auxinclude.h"
+#include "../ren-general/vector.h"
+#include "../ren-general/color.h"
+#include "../ren-general/lifetime.h"
 
 class Script
 {
@@ -40,7 +44,7 @@ class Script
 		bool Do(const String &ScriptName, bool ShowErrors);
 		
 		// Stack information and manipulation
-		int Height(void);
+		unsigned int Height(void);
 		void Pop(void);
 		void ClearStack(void);
 		void Lift(int Position);
@@ -86,7 +90,7 @@ class Script
 		void PushFloat(const float &Data);
 		void PushBoolean(const bool &Data);
 
-		typedef std::function<int(Script State)> Function;
+		typedef std::function<int(Script &State)> Function;
 		void PushFunction(Function NewFunction);
 		void Error(const String &Message);
 
@@ -104,7 +108,7 @@ class Script
 
 		bool PullNext(bool PopTableWhenDone = true);
 
-		void Iterate(std::function<void(Script &State)> Processor);
+		void Iterate(std::function<bool(Script &State)> Processor);
 
 		void PutElement(const String &Index);
 		void PutElement(int Index);
@@ -121,7 +125,7 @@ class Script
 
 		lua_State *Instance;
 		bool Owner;
-		DeleterList<Function> FunctionStorage;
+		std::list<std::function<int(Script State)> > FunctionStorage;
 };
 
 #endif

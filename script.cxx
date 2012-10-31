@@ -1,17 +1,14 @@
 #include "script.h"
 
-#include <ren-general/string.h>
+#include "../ren-general/string.h"
+#include "../ren-general/inputoutput.h"
 
 // System libraries/headers
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 
 String Script::UniqueIndex(void *Address, const String &Suffix)
-{
-	StringStream Out;
-	Out << Address << "_" << Suffix;
-	return Out.str();
-}
+	{ return MemoryStream() << (long unsigned int)Address << "_" << Suffix; }
 
 Script::Script(void) : Instance(luaL_newstate()), Owner(true) {}
 
@@ -58,7 +55,7 @@ bool Script::Do(const String &ScriptName, bool ShowErrors)
 	return true;
 }
 
-int Script::Height(void)
+unsigned int Script::Height(void)
 	{ return lua_gettop(Instance); } 
 
 void Script::Pop(void)
@@ -93,36 +90,39 @@ bool Script::IsNumber(void)
 
 bool Script::IsTable(void)
 	{ return lua_istable(Instance, -1); }
+		
+bool Script::IsFunction(void)
+	{ return lua_isfunction(Instance, -1); }
 
 String Script::GetType(void)
 	{ return lua_typename(Instance, lua_type(Instance, -1)); }
 		
 void Script::AssertNil(String const &Message)
-	{ if (!IsNil()) throw Error::User(Message); }
+	{ if (!IsNil()) throw Error::Input(Message); }
 
 void Script::AssertString(String const &Message)
-	{ if (!IsString()) throw Error::User(Message); }
+	{ if (!IsString()) throw Error::Input(Message); }
 
 void Script::AssertBoolean(String const &Message)
-	{ if (!IsBoolean()) throw Error::User(Message); }
+	{ if (!IsBoolean()) throw Error::Input(Message); }
 
 void Script::AssertNumber(String const &Message)
-	{ if (!IsNumber()) throw Error::User(Message); }
+	{ if (!IsNumber()) throw Error::Input(Message); }
 	
 void Script::AssertTable(String const &Message)
-	{ if (!IsTable()) throw Error::User(Message); }
+	{ if (!IsTable()) throw Error::Input(Message); }
 
 void Script::AssertFunction(String const &Message)
-	{ if (!IsFunction()) throw Error::User(Message); }
+	{ if (!IsFunction()) throw Error::Input(Message); }
 
-void AssertVector(String const &Message)
-	{ if (!IsTable()) throw Error::User(Message + "  (Vector was not a table.)"); }
+void Script::AssertVector(String const &Message)
+	{ if (!IsTable()) throw Error::Input(Message + "  (Vector was not a table.)"); }
 
-void AssertFlatVector(String const &Message)
-	{ if (!IsTable()) throw Error::User(Message + "  (FlatVector was not a table.)"); }
+void Script::AssertFlatVector(String const &Message)
+	{ if (!IsTable()) throw Error::Input(Message + "  (FlatVector was not a table.)"); }
 
-void AssertColor(String const &Message)
-	{ if (!IsTable()) throw Error::User(Message + "  (Color was not a table.)"); }
+void Script::AssertColor(String const &Message)
+	{ if (!IsTable()) throw Error::Input(Message + "  (Color was not a table.)"); }
 
 String Script::GetString(void)
 {
@@ -210,26 +210,32 @@ void Script::SaveGlobal(const String &GlobalName)
 
 void Script::SaveInternal(const String &InternalName)
 {
+#ifndef NDEBUG
+	unsigned int InitialHeight = Height();
+	assert(InitialHeight > 0);
+#endif
 	lua_pushstring(Instance, InternalName.c_str());
-	Duplicate(-2);
+	Lift(-2);
 	lua_settable(Instance, LUA_REGISTRYINDEX);
-	Pop();
+#ifndef NDEBUG
+	assert(Height() == InitialHeight - 1);
+#endif
 }
 
 void Script::PushNil(void)
 	{ lua_pushnil(Instance); }
 
-void Script::PushString(const String &Puttee)
-	{ lua_pushstring(Instance, Pushtee.c_str()); }
+void Script::PushString(const String &Data)
+	{ lua_pushstring(Instance, Data.c_str()); }
 
-void Script::PushInteger(const int &Puttee)
-	{ lua_pushinteger(Instance, Pushtee); }
+void Script::PushInteger(const int &Data)
+	{ lua_pushinteger(Instance, Data); }
 
-void Script::PushIndex(const int &Puttee)
-	{ lua_pushinteger(Instance, Pushtee + 1); }
+void Script::PushIndex(const int &Data)
+	{ lua_pushinteger(Instance, Data + 1); }
 
-void Script::PushFloat(const float &Puttee)
-	{ lua_pushnumber(Instance, Pushtee); }
+void Script::PushFloat(const float &Data)
+	{ lua_pushnumber(Instance, Data); }
 
 void Script::PushBoolean(const bool &Data)
 	{ lua_pushboolean(Instance, Data); }
@@ -237,15 +243,30 @@ void Script::PushBoolean(const bool &Data)
 void Script::PushFunction(Function NewFunction)
 {
 	// Store the lambda
-	Function *UserData = new Function(NewFunction);
-	FunctionStorage.push_back(UserData);
+	FunctionStorage.push_back([this, NewFunction](Script State) 
+	{
+		try 
+		{
+			return NewFunction(State);
+		}
+		catch (Error::System &Failure)
+		{
+			lua_pushstring(Instance, ("Encountered an error interacting with the system.  The error message was: " + Failure.Explanation).c_str());
+			lua_error(Instance);
+		}
+		catch (Error::Input &Failure)
+		{
+			lua_pushstring(Instance, Failure.Explanation.c_str());
+			lua_error(Instance);
+		}
+	});
 
 	// Create the lua hook
 #ifndef NDEBUG
 	unsigned int StartHeight = Height();
 #endif
 
-	lua_pushlightuserdata(Instance, UserData);
+	lua_pushlightuserdata(Instance, &FunctionStorage.back());
 	lua_pushcclosure(Instance, HandleRegisteredFunction, 1);
 
 #ifndef NDEBUG
@@ -253,14 +274,14 @@ void Script::PushFunction(Function NewFunction)
 #endif
 }
 
-void Script::CreateTable(void)
+void Script::PushTable(void)
 	{ lua_newtable(Instance); }
 
 void Script::PushGlobal(const String &GlobalName)
 	{ lua_getglobal(Instance, GlobalName.c_str()); }
 		
 void Script::PushInternal(const String &InternalName)
-	{ lua_getfield(Instance, LUA_REGISTRYINDEX, ValueName.c_str()); }
+	{ lua_getfield(Instance, LUA_REGISTRYINDEX, InternalName.c_str()); }
 		
 bool Script::IsEmpty(void)
 {
@@ -358,7 +379,7 @@ void Script::PutElement(int Index)
 #ifndef NDEBUG
 	unsigned int InitialHeight = Height();
 #endif
-	PushInt(Index);
+	PushInteger(Index);
 	Lift(-2);
 	lua_settable(Instance, -3);
 #ifndef NDEBUG
@@ -416,20 +437,7 @@ void *Script::GetPointer(void)
 
 int Script::HandleRegisteredFunction(lua_State *State)
 {
-	Function &UserFunction = *(Function *)lua_touserdata(State, lua_upvalueindex(1));
-	try 
-	{
-		return UserFunction(Script(State));
-	}
-	catch (Error::System &Failure)
-	{
-		lua_pushstring(Instance, ("Encountered an error interacting with the system.  The error message was: " + Failure.Explanation).c_str());
-		lua_error(Instance);
-	}
-	catch (Error::User &Failure)
-	{
-		lua_pushstring(Instance, Failure.Explanation.c_str());
-		lua_error(Instance);
-	}
+	auto &TargetFunction = *(std::function<int(Script State)> *)lua_touserdata(State, lua_upvalueindex(1));
+	return TargetFunction(Script(State));
 }
 

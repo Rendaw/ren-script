@@ -1,9 +1,10 @@
 #ifndef databuilder_h
 #define databuilder_h
 
-#include <ren-general/string.h>
-#include <ren-general/vector.h>
-#include <ren-general/color.h>
+#include "../ren-general/string.h"
+#include "../ren-general/inputoutput.h"
+#include "../ren-general/vector.h"
+#include "../ren-general/color.h"
 
 class ScriptDataBuilder
 {
