@@ -252,12 +252,12 @@ void Script::PushFunction(Function NewFunction)
 		catch (Error::System &Failure)
 		{
 			lua_pushstring(Instance, ("Encountered an error interacting with the system.  The error message was: " + Failure.Explanation).c_str());
-			lua_error(Instance);
+			return lua_error(Instance);
 		}
 		catch (Error::Input &Failure)
 		{
 			lua_pushstring(Instance, Failure.Explanation.c_str());
-			lua_error(Instance);
+			return lua_error(Instance);
 		}
 	});
 
@@ -294,6 +294,7 @@ bool Script::IsEmpty(void)
 #ifndef NDEBUG
 	assert(Height() == InitialHeight);
 #endif
+	return false;
 }
 
 void Script::PullElement(const String &Index)
