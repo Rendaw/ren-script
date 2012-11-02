@@ -10,7 +10,10 @@
 String Script::UniqueIndex(void *Address, const String &Suffix)
 	{ return MemoryStream() << (long unsigned int)Address << "_" << Suffix; }
 
-Script::Script(void) : Instance(luaL_newstate()), Owner(true) {}
+Script::Script(void) : Instance(luaL_newstate()), Owner(true) 
+{
+	luaL_openlibs(Instance);
+}
 
 Script::Script(lua_State *FromInstance) : Instance(FromInstance), Owner(false) {}
 
@@ -46,8 +49,10 @@ bool Script::Do(const String &ScriptName, bool ShowErrors)
 	{
 		if (ShowErrors)
 		{
-			StandardErrorStream << String("Error running Lua file ") << ScriptName << "\n" << OutputStream::Flush();
-			StandardErrorStream << String("Error was:\n") << lua_tostring(Instance, -1) << "\n" << OutputStream::Flush();
+			StandardErrorStream << "Error running Lua file " << ScriptName << "\n" << OutputStream::Flush();
+			if (lua_isstring(Instance, -1))
+				StandardErrorStream << "Error was:\n" << lua_tostring(Instance, -1) << "\n" << OutputStream::Flush();
+			else StandardErrorStream << "There was no error message.\n" << OutputStream::Flush();
 		}
 		return false;
 	}
@@ -251,7 +256,7 @@ void Script::PushFunction(Function NewFunction)
 		}
 		catch (Error::System &Failure)
 		{
-			lua_pushstring(Instance, ("Encountered an error interacting with the system.  The error message was: " + Failure.Explanation).c_str());
+			lua_pushstring(Instance, ("Encountered an error interacting with the system: " + Failure.Explanation).c_str());
 			return lua_error(Instance);
 		}
 		catch (Error::Input &Failure)
@@ -263,14 +268,14 @@ void Script::PushFunction(Function NewFunction)
 
 	// Create the lua hook
 #ifndef NDEBUG
-	unsigned int StartHeight = Height();
+	unsigned int InitialHeight = Height();
 #endif
 
 	lua_pushlightuserdata(Instance, &FunctionStorage.back());
 	lua_pushcclosure(Instance, HandleRegisteredFunction, 1);
 
 #ifndef NDEBUG
-	assert(Height() == StartHeight);
+	assert(Height() == InitialHeight + 1);
 #endif
 }
 
@@ -364,7 +369,7 @@ void Script::Iterate(std::function<bool(Script &State)> Processor)
 		
 void Script::PutElement(const String &Index)
 {
-	assert(IsTable());
+	assert(lua_istable(Instance, -2));
 #ifndef NDEBUG
 	unsigned int InitialHeight = Height();
 #endif
