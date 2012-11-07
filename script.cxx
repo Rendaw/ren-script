@@ -54,6 +54,11 @@ bool Script::Do(const String &ScriptName, bool ShowErrors)
 				StandardErrorStream << "Error was:\n" << lua_tostring(Instance, -1) << "\n" << OutputStream::Flush();
 			else StandardErrorStream << "There was no error message.\n" << OutputStream::Flush();
 		}
+		else
+		{
+			if (lua_isstring(Instance, -1))
+				StandardErrorStream << lua_tostring(Instance, -1) << "\n" << OutputStream::Flush();
+		}
 		return false;
 	}
 
