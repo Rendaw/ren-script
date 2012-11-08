@@ -29,6 +29,7 @@ lua_State *Script::GetState(void)
 
 bool Script::Do(const String &ScriptName, bool ShowErrors)
 {
+	assert(Height() == 0);
 	if (ShowErrors)
 	{
 		lua_getglobal(Instance, "debug");
