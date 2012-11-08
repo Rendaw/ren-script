@@ -85,6 +85,11 @@ void Script::Lift(int Position)
 	assert(Height() == InitialHeight);
 #endif	
 }
+		
+void Script::Duplicate(int Position)
+{
+	lua_pushvalue(Instance, Position);
+}
 
 bool Script::IsNil(void)
 	{ return lua_isnil(Instance, -1); }

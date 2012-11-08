@@ -48,6 +48,7 @@ class Script
 		void Pop(void);
 		void ClearStack(void);
 		void Lift(int Position);
+		void Duplicate(int Position);
 		
 		// Information get functions
 		bool IsNil(void);
