@@ -138,8 +138,9 @@ ScriptDataBuilder &ScriptDataBuilder::Function(std::list<String> const &Argument
 	Output << ")\n";
 	MemoryStream BodyStream(Body);
 	String NextLine;
-	while (BodyStream >> NextLine)
+	while (BodyStream)
 	{
+		BodyStream >> NextLine;
 		Indent();
 		Output << "\t" << NextLine << "\n";
 	}
