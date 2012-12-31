@@ -350,7 +350,7 @@ bool Script::PullNext(bool PopTableWhenDone)
 		lua_pushnil(Instance);
 
 	// The stack must always have a table underneath the iterator value for iteration
-	assert(!lua_istable(Instance, -2));
+	assert(lua_istable(Instance, -2));
 
 	// Try to iterate - if the end is reached, pop the table
 	bool Success = lua_next(Instance, -2);
@@ -364,15 +364,15 @@ void Script::Iterate(std::function<bool(Script &State)> Processor)
 	while (PullNext(false))
 	{
 #ifndef NDEBUG
-		unsigned int InitialHeight = Height();
+		unsigned int InitialHeight = Height(); // Table + key + value
 #endif
-		bool Continue = Processor(*this);
+		bool Continue = Processor(*this); // Consumes value
 #ifndef NDEBUG
-		assert(Height() == InitialHeight);
+		assert(Height() == InitialHeight - 1); // Table + key
 #endif
 		if (!Continue)
 	       	{
-			Pop();
+			Pop(); // Pop the key
 			break;
 		}
 	}
