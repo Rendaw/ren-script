@@ -39,6 +39,8 @@ class Script
 		~Script(void);
 		
 		lua_State *GetState(void);
+
+		String DumpStack(unsigned int Depth = 0);
 		
 		// Code loading and execution
 		bool Do(const String &ScriptName, bool ShowErrors);

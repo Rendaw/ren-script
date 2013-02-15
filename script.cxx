@@ -26,6 +26,76 @@ lua_State *Script::GetState(void)
 {
 	return Instance;
 }
+		
+String Script::DumpStack(unsigned int Depth)
+{
+#ifndef NDEBUG
+	unsigned int const InitialHeight = Height();
+#endif
+	MemoryStream Out;
+
+	std::function<void(unsigned int, String)> DumpTable = [&](unsigned int CurrentDepth, String IndentPadding)
+	{
+#ifndef NDEBUG
+		unsigned int const TableInitialHeight = Height();
+#endif
+		Iterate([&](Script &)
+		{
+#ifndef NDEBUG
+			unsigned int const IterateInitialHeight = Height();
+#endif
+			Duplicate(-2);
+			String Key;
+			if (IsString()) Key = GetString();
+			else if (IsNumber()) Key = AsString(GetFloat());
+			else { Key = GetType(); Pop(); }
+
+			String Value;
+			if (IsString()) Value = GetString();
+			else if (IsNumber()) Value = AsString(GetFloat());
+			else 
+			{ 
+				Value = GetType();
+
+				Out << IndentPadding << Key << ": " << Value << "\n";
+
+				if (IsTable() && (CurrentDepth < Depth))
+					DumpTable(CurrentDepth + 1, IndentPadding + "\t");
+
+				Pop();
+#ifndef NDEBUG
+				assert(Height() == IterateInitialHeight - 1);
+#endif
+				return true;
+			}
+
+			Out << IndentPadding << Key << ": " << Value << "\n";
+#ifndef NDEBUG
+			assert(Height() == IterateInitialHeight - 1);
+#endif
+			return true;
+		});
+#ifndef NDEBUG
+		assert(Height() == TableInitialHeight);
+#endif
+	};
+
+	for (unsigned int Position = 1; Position <= Height(); ++Position)
+	{
+		Out << Position << ": " << lua_typename(Instance, lua_type(Instance, Position)) << "\n";
+		if (lua_istable(Instance, Position))
+		{
+			Duplicate(Position);
+			DumpTable(0, "\t");
+			Pop();
+		}
+	}
+#ifndef NDEBUG
+	assert(Height() == InitialHeight);
+#endif
+
+	return Out;
+}
 
 bool Script::Do(const String &ScriptName, bool ShowErrors)
 {
